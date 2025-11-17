@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1026514207169",
+    "firebase_url": "https://powersense-44e63-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "powersense-44e63",
+    "storage_bucket": "powersense-44e63.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026514207169:android:dab43078c15ab774c9af40",
+        "android_client_info": {
+          "package_name": "com.powersense"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2cEC23ddijl_TE0K3yaD3Q0NnXQUWC38"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
