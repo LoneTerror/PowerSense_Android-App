@@ -1,16 +1,7 @@
 package com.powersense.screens.tabs
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -18,35 +9,48 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.powersense.ui.theme.PowerSenseGreen
 import com.powersense.ui.theme.PowerSensePurple
-import com.powersense.ui.theme.PowerSenseTheme
+import com.powersense.viewmodels.ProfileViewModel
+import java.util.Calendar
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    profileViewModel: ProfileViewModel = viewModel()
+) {
+    // 1. Get the user profile state
+    val userProfile by profileViewModel.userProfile.collectAsState()
+
+    // 2. Get the first name (or default to "User" if loading/empty)
+    val displayName = remember(userProfile) {
+        val fullName = userProfile?.fullName
+        if (!fullName.isNullOrEmpty()) {
+            fullName.split(" ").firstOrNull() ?: fullName
+        } else {
+            "User"
+        }
+    }
+
+    // 3. Determine greeting based on time of day
+    val greeting = remember {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 0..11 -> "Good Morning"
+            in 12..16 -> "Good Afternoon"
+            else -> "Good Evening"
+        }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -60,7 +64,7 @@ fun HomeScreen() {
             // --- Greeting ---
             item {
                 Text(
-                    text = "Good morning, Alex", // TODO: Replace with dynamic user name
+                    text = "$greeting, $displayName", // Use dynamic greeting and name
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -69,8 +73,8 @@ fun HomeScreen() {
             // --- "Hero" Metric: Current Usage ---
             item {
                 HeroUsageCard(
-                    currentUsageW = 1245.7, // TODO: Replace with real-time data
-                    percentChange = -12.5 // TODO: Replace with real data
+                    currentUsageW = 1245.7,
+                    percentChange = -12.5
                 )
             }
 
@@ -82,13 +86,13 @@ fun HomeScreen() {
                 ) {
                     QuickMetricCard(
                         title = "Today's Total",
-                        value = "8.2", // TODO: Replace with real data
+                        value = "8.2",
                         unit = "kWh",
                         modifier = Modifier.weight(1f)
                     )
                     QuickMetricCard(
                         title = "Est. Cost Today",
-                        value = "$1.15", // TODO: Replace with real data
+                        value = "$1.15",
                         unit = "USD",
                         modifier = Modifier.weight(1f)
                     )
@@ -108,7 +112,8 @@ fun HomeScreen() {
     }
 }
 
-// --- Composable for the Main "Hero" Card ---
+// --- Helper Composables (Unchanged) ---
+
 @Composable
 fun HeroUsageCard(currentUsageW: Double, percentChange: Double) {
     Card(
@@ -135,7 +140,6 @@ fun HeroUsageCard(currentUsageW: Double, percentChange: Double) {
                 color = Color.White
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // TODO: Add logic for up/down arrow and color
             Text(
                 text = "%.1f%% vs yesterday".format(percentChange),
                 style = MaterialTheme.typography.bodyMedium,
@@ -145,7 +149,6 @@ fun HeroUsageCard(currentUsageW: Double, percentChange: Double) {
     }
 }
 
-// --- Composable for the small summary cards ---
 @Composable
 fun QuickMetricCard(title: String, value: String, unit: String, modifier: Modifier = Modifier) {
     Card(
@@ -178,10 +181,8 @@ fun QuickMetricCard(title: String, value: String, unit: String, modifier: Modifi
     }
 }
 
-// --- Composable for the "Favorite Devices" section ---
 @Composable
 fun FavoriteDevicesSection() {
-    // TODO: This data would come from a ViewModel
     val favoriteDevices = listOf(
         Pair("Living Room", Icons.Default.Lightbulb),
         Pair("Bedroom Fan", Icons.Default.WbSunny),
@@ -207,7 +208,6 @@ fun FavoriteDevicesSection() {
                     icon = icon,
                     isOn = switchStates[name] ?: false,
                     onToggle = {
-                        // TODO: Add real logic to update ViewModel/backend
                         switchStates = switchStates.toMutableMap().apply {
                             this[name] = !this[name]!!
                         }
@@ -266,7 +266,6 @@ fun FavoriteDeviceCard(name: String, icon: ImageVector, isOn: Boolean, onToggle:
     }
 }
 
-// --- Composable for the Mini Chart ---
 @Composable
 fun MiniChartCard() {
     Card(
@@ -283,7 +282,6 @@ fun MiniChartCard() {
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(16.dp))
-            // --- Chart Placeholder ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -301,23 +299,6 @@ fun MiniChartCard() {
                     fontWeight = FontWeight.SemiBold
                 )
             }
-            // TODO: Add "View Details" button that navigates to Metrics tab
         }
-    }
-}
-
-@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_NO)
-@Composable
-fun HomeScreenPreviewLight() {
-    PowerSenseTheme {
-        HomeScreen()
-    }
-}
-
-@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
-@Composable
-fun HomeScreenPreviewDark() {
-    PowerSenseTheme(themeOption = com.powersense.viewmodels.ThemeOption.Dark) {
-        HomeScreen()
     }
 }

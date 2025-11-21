@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -26,6 +27,7 @@ import com.powersense.screens.tabs.HomeScreen
 import com.powersense.screens.tabs.MetricsScreen
 import com.powersense.screens.tabs.SettingsScreen
 import com.powersense.screens.tabs.SimulationScreen
+import com.powersense.ui.theme.PowerSenseTheme
 import com.powersense.viewmodels.ThemeViewModel
 
 // A sealed class to define our bottom bar items
@@ -42,7 +44,7 @@ sealed class BottomBarScreen(
 
 @Composable
 fun MainAppScreen(
-    appNavController: NavHostController
+    appNavController: NavHostController // Required parameter
 ) {
     val navController = rememberNavController()
     // Get the ViewModel here. It will be shared by SettingsScreen.
@@ -108,9 +110,22 @@ fun MainAppScreen(
                             popUpTo(0) { inclusive = true }
                         }
                     },
-                    themeViewModel = themeViewModel // <-- PASS THE VIEWMODEL
+                    themeViewModel = themeViewModel,
+                    // Pass the main controller down
+                    appNavController = appNavController
                 )
             }
         }
+    }
+}
+
+// PREVIEW FIX: Provide a dummy controller for the preview
+@Preview(showBackground = true)
+@Composable
+fun MainAppScreenPreview() {
+    PowerSenseTheme {
+        // We create a fake controller just for the preview to satisfy the parameter
+        val fakeNavController = rememberNavController()
+        MainAppScreen(appNavController = fakeNavController)
     }
 }

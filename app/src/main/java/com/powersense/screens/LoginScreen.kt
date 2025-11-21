@@ -24,13 +24,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.powersense.R
+import com.powersense.screens.components.PasswordTextField
 import com.powersense.ui.theme.PowerSensePurple
-import com.powersense.ui.theme.PowerSenseTheme
 import com.powersense.viewmodels.AuthViewModel
 import com.powersense.viewmodels.AuthState
 
@@ -115,25 +114,18 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Password Field ---
-        OutlinedTextField(
+        // --- Password Field (UPDATED) ---
+        PasswordTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
-            leadingIcon = { Icon(Icons.Default.Lock, "Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            label = "Password",
+            leadingIcon = Icons.Default.Lock,
             readOnly = authState is AuthState.Loading,
-            singleLine = true,
-            // --- 11. ADD KEYBOARD OPTIONS/ACTIONS ---
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
                 onDone = {
                     keyboardController?.hide()
-                    if (authState !is AuthState.Loading) {
-                        authViewModel.logIn(email.trim(), password.trim())
-                    }
+                    authViewModel.logIn(email.trim(), password.trim())
                 }
             )
         )

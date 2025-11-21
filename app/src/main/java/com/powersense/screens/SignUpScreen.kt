@@ -15,6 +15,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility // <-- ADDED THIS
+import androidx.compose.material.icons.filled.VisibilityOff // <-- ADDED THIS
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,11 +33,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation // <-- ADDED THIS
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.powersense.R
+import com.powersense.screens.components.PasswordTextField
 import com.powersense.ui.theme.PowerSenseGreen
 import com.powersense.ui.theme.PowerSensePurple
 import com.powersense.ui.theme.PowerSenseTheme
@@ -42,6 +47,7 @@ import com.powersense.viewmodels.AuthViewModel
 import com.powersense.viewmodels.AuthState
 
 // --- PASSWORD STRENGTH HELPER ---
+// Removing 'public' keyword as it's redundant for enum classes
 enum class PasswordStrength(val text: String, val color: Color) {
     WEAK("Weak", Color.Red),
     AVERAGE("Average", Color.Yellow),
@@ -83,6 +89,7 @@ fun SignUpScreen(
     onNavigateToLogin: () -> Unit,
     authViewModel: AuthViewModel = viewModel()
 ) {
+    var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -97,6 +104,10 @@ fun SignUpScreen(
     // --- 1. NEW STATE FOR MATCHING ---
     // null = pristine, true = match, false = mismatch
     var passwordMatchState by remember { mutableStateOf<Boolean?>(null) }
+
+    // State for confirm password visibility toggle
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+
     val authState by authViewModel.authState.collectAsState()
     val context = LocalContext.current
     // --- 7. ADD KEYBOARD/FOCUS CONTROLLERS ---
@@ -170,6 +181,21 @@ fun SignUpScreen(
             modifier = Modifier.padding(bottom = 48.dp)
         )
 
+        // --- Full Name Field ---
+        OutlinedTextField(
+            value = fullName,
+            onValueChange = { fullName = it },
+            label = { Text("Full Name") },
+            leadingIcon = { Icon(Icons.Default.Person, "Name") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            readOnly = authState is AuthState.Loading,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
         // --- Email Field ---
         OutlinedTextField(
             value = email,
@@ -188,27 +214,16 @@ fun SignUpScreen(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Password Field ---
-        OutlinedTextField(
+        // --- Password Field (UPDATED to use PasswordTextField with Focus) ---
+        PasswordTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Create your password") },
-            leadingIcon = { Icon(Icons.Default.Lock, "Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier
-                .fillMaxWidth()
-                // This updates the focus state variable
-                .onFocusChanged { focusState ->
-                    isPasswordFocused = focusState.isFocused
-                },
-            shape = RoundedCornerShape(12.dp),
+            label = "Create your password",
+            leadingIcon = Icons.Default.Lock,
             readOnly = authState is AuthState.Loading,
-            singleLine = true,
-            // --- 11. ADD KEYBOARD OPTIONS/ACTIONS ---
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            )
+            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+            modifier = Modifier.onFocusChanged { isPasswordFocused = it.isFocused }
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -217,11 +232,11 @@ fun SignUpScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- 3. DEFINE DYNAMIC COLORS AND ICON ---
-        val (trailingIcon, iconTint, borderColor) = when (passwordMatchState) {
+        // --- Confirm Password Field (UPDATED with visibility toggle + dynamic border) ---
+        val (matchIcon, iconTint, borderColor) = when (passwordMatchState) {
             true -> Triple(Icons.Default.Check, PowerSenseGreen, PowerSenseGreen)
             false -> Triple(Icons.Default.Close, Color.Red, Color.Red)
-            null -> Triple(null, MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.primary)
+            null -> Triple(null, MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.outline)
         }
 
         // --- Confirm Password Field (Updated) ---
@@ -230,40 +245,39 @@ fun SignUpScreen(
             onValueChange = { confirmPassword = it },
             label = { Text("Re-enter your password") },
             leadingIcon = { Icon(Icons.Default.Lock, "Confirm") },
-            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             readOnly = authState is AuthState.Loading,
-            // --- 4. ADD TRAILING ICON ---
-            trailingIcon = {
-                if (trailingIcon != null) {
-                    Icon(trailingIcon, contentDescription = "Match Status", tint = iconTint)
-                }
-            },
-            // --- 5. ADD DYNAMIC COLORS ---
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = borderColor,
-                unfocusedBorderColor = if (passwordMatchState == null) MaterialTheme.colorScheme.outline else borderColor
-            ),
             singleLine = true,
-            // --- 13. ADD KEYBOARD OPTIONS/ACTIONS ---
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    keyboardController?.hide()
-                    if (authState !is AuthState.Loading) {
-                        // This is the same logic as the button
-                        if (password != confirmPassword) {
-                            Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show()
-                        } else if (strength != PasswordStrength.GOOD && strength != PasswordStrength.STRONG) {
-                            Toast.makeText(context, "Password is not strong enough.", Toast.LENGTH_SHORT).show()
-                        } else {
-                            authViewModel.signUp(email.trim(), password.trim())
-                        }
+            // Add visual transformation logic
+            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            // Add trailing icon logic manually here to combine the match icon AND the eye icon
+            trailingIcon = {
+                Row {
+                    if (matchIcon != null) {
+                        Icon(matchIcon, "Match Status", tint = iconTint, modifier = Modifier.padding(end = 8.dp))
+                    }
+                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                        Icon(
+                            imageVector = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password"
+                        )
                     }
                 }
-            )
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = borderColor,
+                unfocusedBorderColor = borderColor
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                keyboardController?.hide()
+                if (password != confirmPassword) { Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show() }
+                else if (strength != PasswordStrength.GOOD && strength != PasswordStrength.STRONG) { Toast.makeText(context, "Password too weak.", Toast.LENGTH_SHORT).show() }
+                else { authViewModel.signUp(email.trim(), password.trim(), fullName.trim()) }
+            })
         )
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // --- Password Requirements Checklist ---
@@ -290,7 +304,7 @@ fun SignUpScreen(
                 } else if (strength != PasswordStrength.GOOD && strength != PasswordStrength.STRONG) {
                     Toast.makeText(context, "Password is not strong enough.", Toast.LENGTH_SHORT).show()
                 } else {
-                    authViewModel.signUp(email.trim(), password.trim())
+                    authViewModel.signUp(email.trim(), password.trim(), fullName.trim())
                 }
             },
             modifier = Modifier
