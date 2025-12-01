@@ -12,45 +12,86 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-// Define an Enum for our theme options
 enum class ThemeOption(val value: String) {
     Light("Light"),
     Dark("Dark"),
     System("System")
 }
 
-// Create the DataStore instance
+// Enum for Consumption Summary Interval
+enum class SummaryInterval(val hours: Int, val label: String) {
+    SixHours(6, "Every 6 Hours"),
+    TwelveHours(12, "Every 12 Hours"),
+    TwentyFourHours(24, "Every 24 Hours")
+}
+
 private val Application.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class ThemeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dataStore = application.dataStore
 
-    // Define the key for saving the theme
     companion object {
         private val THEME_KEY = stringPreferencesKey("theme_option")
+        private val SUMMARY_INTERVAL_KEY = stringPreferencesKey("summary_interval") // New Key
+        private val SUMMARY_ENABLED_KEY = stringPreferencesKey("summary_enabled") // New Key
     }
 
-    // Read the theme from DataStore and expose it as a StateFlow
-    // This will emit the new value whenever it changes
     val themeState = dataStore.data
         .map { preferences ->
-            // Get the string value from DataStore, default to "System"
             val themeString = preferences[THEME_KEY] ?: ThemeOption.System.value
-            // Convert the string to our ThemeOption enum
             ThemeOption.entries.firstOrNull { it.value == themeString } ?: ThemeOption.System
         }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = ThemeOption.System // Default value while loading
+            initialValue = ThemeOption.System
         )
 
-    // Function to set (write) the new theme
+    // New State for Summary Interval
+    val summaryIntervalState = dataStore.data
+        .map { preferences ->
+            val intervalString = preferences[SUMMARY_INTERVAL_KEY] ?: SummaryInterval.TwentyFourHours.name
+            SummaryInterval.entries.firstOrNull { it.name == intervalString } ?: SummaryInterval.TwentyFourHours
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SummaryInterval.TwentyFourHours
+        )
+
+    // New State for Summary Enabled Toggle
+    val isSummaryEnabled = dataStore.data
+        .map { preferences ->
+            preferences[SUMMARY_ENABLED_KEY]?.toBooleanStrictOrNull() ?: true // Default true
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
     fun setTheme(theme: ThemeOption) {
         viewModelScope.launch {
             dataStore.edit { preferences ->
                 preferences[THEME_KEY] = theme.value
+            }
+        }
+    }
+
+    // New setters
+    fun setSummaryInterval(interval: SummaryInterval) {
+        viewModelScope.launch {
+            dataStore.edit { preferences ->
+                preferences[SUMMARY_INTERVAL_KEY] = interval.name
+            }
+        }
+    }
+
+    fun setSummaryEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.edit { preferences ->
+                preferences[SUMMARY_ENABLED_KEY] = enabled.toString()
             }
         }
     }

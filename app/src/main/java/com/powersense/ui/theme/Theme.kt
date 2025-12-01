@@ -15,44 +15,61 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.powersense.viewmodels.ThemeOption // <-- IMPORT
+import com.powersense.viewmodels.ThemeOption
 
-// Updated light color scheme using your wireframe colors
 private val LightColorScheme = lightColorScheme(
     primary = PowerSensePurple,
     secondary = PowerSenseGreen,
-    tertiary = Pink40,
-    background = LightGreyBackground,
-    surface = Color.White,
+    tertiary = PowerSenseOrange,
+
+    background = CozyBackground,
+    surface = CozySurface,
+    surfaceVariant = CozySurfaceVariant,
+
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = DarkText,
-    onSurface = DarkText,
+
+    onBackground = CozyPrimaryText,
+    onSurface = CozyPrimaryText,
+    onSurfaceVariant = CozySecondaryText,
+
+    outline = CozyOutline,
+    outlineVariant = CozyOutline
 )
 
-// --- ADD A DARK COLOR SCHEME ---
 private val DarkColorScheme = darkColorScheme(
     primary = PowerSensePurple,
     secondary = PowerSenseGreen,
-    tertiary = Pink80,
-    background = Color(0xFF1C1B1F), // Dark background
-    surface = Color(0xFF2C2A2F),    // Dark surface
+    tertiary = PowerSenseOrange,
+
+    // UPDATED: A slightly lighter "Greyish" background (not total black)
+    background = Color(0xFF202124),
+
+    // UPDATED: Surface matches background for seamless headers in dark mode
+    // or slightly lighter for cards. Let's keep surface consistent.
+    surface = Color(0xFF303134),
+
+    surfaceVariant = DarkCardSurface,
+
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = Color(0xFFE6E1E5), // Light text
-    onSurface = Color(0xFFE6E1E5)  // Light text
-)
 
+    onBackground = DarkPrimaryText,
+    onSurface = DarkPrimaryText,
+    onSurfaceVariant = DarkSecondaryText,
+
+    outline = DarkOutline,
+    outlineVariant = DarkOutline
+)
 
 @Composable
 fun PowerSenseTheme(
     dynamicColor: Boolean = false,
-    themeOption: ThemeOption = ThemeOption.System, // <-- PARAMETER
+    themeOption: ThemeOption = ThemeOption.System,
     content: @Composable () -> Unit
 ) {
-    // DETERMINE darkTheme from themeOption
     val darkTheme = when(themeOption) {
         ThemeOption.Light -> false
         ThemeOption.Dark -> true
@@ -64,7 +81,6 @@ fun PowerSenseTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
@@ -73,8 +89,18 @@ fun PowerSenseTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb() // Set status bar color
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+
+            if (darkTheme) {
+                // Dark Mode: Use the NEW Greyish Background for Status Bar
+                // This ensures the status bar matches the app background
+                window.statusBarColor = Color(0xFF202124).toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            } else {
+                // Light Mode: Dark Mocha Header
+                val aestheticDarkHeader = Color(0xFF4E463F)
+                window.statusBarColor = aestheticDarkHeader.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            }
         }
     }
 

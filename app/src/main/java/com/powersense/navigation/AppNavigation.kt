@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.powersense.screens.AvatarSelectionScreen
 import com.powersense.screens.ChangePasswordScreen
 import com.powersense.screens.ForgotPasswordScreen
@@ -20,9 +22,15 @@ import com.powersense.viewmodels.ThemeOption
 fun AppNavigation() {
     val navController = rememberNavController()
 
+    // 1. Check if a user is currently logged in
+    val currentUser = Firebase.auth.currentUser
+
+    // 2. Decide where to start: 'main' if logged in, 'login' if not
+    val startDest = if (currentUser != null) "main" else "login"
+
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = startDest // Use the dynamic variable here
     ) {
         composable("login") {
             PowerSenseTheme(themeOption = ThemeOption.Dark) {
@@ -77,6 +85,9 @@ fun AppNavigation() {
                     navController.popBackStack()
                 },
                 onLogout = {
+                    // 3. ACTUAL SIGN OUT LOGIC
+                    Firebase.auth.signOut()
+
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
@@ -91,7 +102,6 @@ fun AppNavigation() {
             )
         }
 
-        // --- NEW ROUTE FOR LOGGED-IN USERS ---
         composable("reset_password_internal") {
             ResetPasswordScreen(
                 onNavigateBack = { navController.popBackStack() }
@@ -104,12 +114,10 @@ fun AppNavigation() {
             )
         }
 
-        // NEW ROUTE FOR AVATAR SELECTION
         composable("avatar_selection") {
             AvatarSelectionScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onAvatarSelected = { url ->
-                    // Pass the URL back to the previous screen (ProfileScreen)
                     navController.previousBackStackEntry
                         ?.savedStateHandle
                         ?.set("selected_avatar", url)

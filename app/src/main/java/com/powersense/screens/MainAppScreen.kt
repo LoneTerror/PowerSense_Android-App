@@ -23,14 +23,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.powersense.screens.tabs.HomeScreen
 import com.powersense.screens.tabs.MetricsScreen
 import com.powersense.screens.tabs.SettingsScreen
 import com.powersense.screens.tabs.SimulationScreen
 import com.powersense.ui.theme.PowerSenseTheme
 import com.powersense.viewmodels.ThemeViewModel
+import com.powersense.viewmodels.RelayViewModel
 
-// A sealed class to define our bottom bar items
 sealed class BottomBarScreen(
     val route: String,
     val title: String,
@@ -44,13 +46,14 @@ sealed class BottomBarScreen(
 
 @Composable
 fun MainAppScreen(
-    appNavController: NavHostController // Required parameter
+    appNavController: NavHostController
 ) {
     val navController = rememberNavController()
-    // Get the ViewModel here. It will be shared by SettingsScreen.
     val themeViewModel: ThemeViewModel = viewModel()
 
-    // Scaffold provides the basic structure (like top bar, bottom bar)
+    // Create ONE instance of RelayViewModel here and pass it down
+    val relayViewModel: RelayViewModel = viewModel()
+
     Scaffold(
         bottomBar = {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -72,7 +75,6 @@ fun MainAppScreen(
                         selected = isSelected,
                         onClick = {
                             navController.navigate(screen.route) {
-                                // Pop up to the start, avoid building a big back stack
                                 popUpTo(navController.graph.startDestinationId)
                                 launchSingleTop = true
                             }
@@ -82,18 +84,17 @@ fun MainAppScreen(
             }
         }
     ) { innerPadding ->
-        // This NavHost is *nested* inside the MainAppScreen.
-        // It controls which of the 4 tab screens is currently visible.
         NavHost(
             navController = navController,
             startDestination = BottomBarScreen.Home.route,
-            modifier = Modifier.padding(innerPadding) // Apply padding from Scaffold
+            // Apply ONLY bottom padding to avoid double-padding at top
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             composable(BottomBarScreen.Home.route) {
-                HomeScreen()
+                HomeScreen(relayViewModel = relayViewModel)
             }
             composable(BottomBarScreen.Simulation.route) {
-                SimulationScreen()
+                SimulationScreen(relayViewModel = relayViewModel)
             }
             composable(BottomBarScreen.Metrics.route) {
                 MetricsScreen()
@@ -101,17 +102,15 @@ fun MainAppScreen(
             composable(BottomBarScreen.Settings.route) {
                 SettingsScreen(
                     onNavigateToProfile = {
-                        // Use the main app controller to go to the profile page
                         appNavController.navigate("profile")
                     },
                     onLogout = {
-                        // On logout, go back to login screen and clear history
+                        Firebase.auth.signOut()
                         appNavController.navigate("login") {
                             popUpTo(0) { inclusive = true }
                         }
                     },
                     themeViewModel = themeViewModel,
-                    // Pass the main controller down
                     appNavController = appNavController
                 )
             }
@@ -119,12 +118,10 @@ fun MainAppScreen(
     }
 }
 
-// PREVIEW FIX: Provide a dummy controller for the preview
 @Preview(showBackground = true)
 @Composable
 fun MainAppScreenPreview() {
     PowerSenseTheme {
-        // We create a fake controller just for the preview to satisfy the parameter
         val fakeNavController = rememberNavController()
         MainAppScreen(appNavController = fakeNavController)
     }

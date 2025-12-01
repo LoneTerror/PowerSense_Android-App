@@ -1,9 +1,6 @@
 package com.powersense.screens
 
-import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -53,17 +50,17 @@ fun ProfileScreen(
     val profile by profileViewModel.userProfile.collectAsState()
     val profileState by profileViewModel.profileState.collectAsState()
 
-    // Use remember with keys to update state when profile changes
     var fullName by remember(profile) { mutableStateOf(profile?.fullName ?: "") }
     var username by remember(profile) { mutableStateOf(profile?.username ?: "") }
     var email by remember(profile) { mutableStateOf(profile?.email ?: "") }
     var phone by remember(profile) { mutableStateOf(profile?.phone ?: "") }
 
+    // State for Logout Confirmation Dialog
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
 
     // --- LISTEN FOR AVATAR SELECTION RESULT ---
-    // FIX: We removed the 'by' keyword here because the chain can be null.
-    // Instead, we get the State object nullable and access .value safely.
     val currentBackStackEntry = appNavController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
     val selectedAvatarState = savedStateHandle?.getLiveData<String>("selected_avatar")?.observeAsState()
@@ -72,7 +69,6 @@ fun ProfileScreen(
     LaunchedEffect(selectedAvatar) {
         selectedAvatar?.let { url ->
             profileViewModel.updateProfileImage(url)
-            // Clear the data so we don't update again unnecessarily
             savedStateHandle?.remove<String>("selected_avatar")
         }
     }
@@ -131,7 +127,6 @@ fun ProfileScreen(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                // Using Coil's AsyncImage with ImageRequest builder
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(profile?.profileImageUrl)
@@ -142,7 +137,6 @@ fun ProfileScreen(
                     contentScale = ContentScale.Crop
                 )
 
-                // Fallback icon if no image URL is present
                 if (profile?.profileImageUrl.isNullOrEmpty()) {
                     Icon(
                         imageVector = Icons.Default.Person,
@@ -153,7 +147,6 @@ fun ProfileScreen(
                 }
             }
 
-            // --- Button navigates to selection screen ---
             OutlinedButton(
                 onClick = { appNavController.navigate("avatar_selection") },
                 shape = RoundedCornerShape(16.dp),
@@ -258,7 +251,7 @@ fun ProfileScreen(
                         onClick = { appNavController.navigate("privacy_settings") }
                     )
                     Button(
-                        onClick = onLogout,
+                        onClick = { showLogoutDialog = true }, // Trigger Dialog
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp)
@@ -272,6 +265,32 @@ fun ProfileScreen(
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // --- LOGOUT CONFIRMATION DIALOG ---
+        if (showLogoutDialog) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                title = { Text("Log Out") },
+                text = { Text("Are you sure you want to log out of PowerSense?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showLogoutDialog = false
+                            onLogout() // Perform actual logout logic passed from nav
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) {
+                        Text("Log Out", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLogoutDialog = false }) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.surface
+            )
         }
     }
 }
