@@ -3,30 +3,36 @@ package com.powersense.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // --- BRAND COLORS (Softened) ---
-val PowerSensePurple = Color(0xFFA594F9) // Softer, pastel purple
-val PowerSenseGreen = Color(0xFF81C784)  // Calming pastel green
-val PowerSenseOrange = Color(0xFFFFB74D) // Warm accent for warnings/favorites
+val PowerSensePurple = Color(0xFFA594F9)
+val PowerSenseGreen = Color(0xFF81C784)
+val PowerSenseOrange = Color(0xFFFFB74D)
+
+// NEW: Soft Peach for Logout/Destructive actions
+val PowerSensePeach = Color(0xFFEF5350)
 
 // --- COZY LIGHT THEME PALETTE ---
-val CozyBackground = Color(0xFFFBF8F1)
-val CozySurface = Color(0xFFFFFFFF)
-val CozySurfaceVariant = Color(0xFFF0EAE0)
+// UPDATED: A richer "Cream" color for the main background
+val CozyBackground = Color(0xFFF9F4E7)
+
+val CozySurface = Color(0xFFF4F0E8) // Warm Beige (Cards)
+val CozySurfaceVariant = Color(0xFFEBE5DE)
 val CozyHeaderBackground = Color(0xFF4E463F)
 val CozyPrimaryText = Color(0xFF4A4036)
 val CozySecondaryText = Color(0xFF7D746D)
 val CozyOutline = Color(0xFFD7CCC8)
 
+// --- NAVIGATION BAR COLORS ---
+// PowerSensePurple (0xFFA594F9) with ~40% opacity (0x66)
+val NavIndicatorPurpleLight = Color(0x66A594F9)
+val NavSelectedContent = CozyPrimaryText
+// NEW: A slightly darker beige to separate the Navbar from the Cream background
+val NavBackground = Color(0xFFEEE8DC)
+
+
 // --- DARK THEME PALETTE (Visibly Greyish) ---
-// Background: A clear, rich Dark Grey (Material Surface Container)
-// Was 1A1C1E (Too black) -> Now 202124 (Google Dark) or 2C2C2E (iOS Dark Grey)
 val DarkAppBackground = Color(0xFF202124)
-
-// Surface: Lighter grey for cards to pop
 val DarkCardSurface = Color(0xFF303134)
-
-// Outline: A clearly visible grey border color
 val DarkOutline = Color(0xFF5F6368)
-
 val DarkPrimaryText = Color(0xFFE8EAED)
 val DarkSecondaryText = Color(0xFF9AA0A6)
 

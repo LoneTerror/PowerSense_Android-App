@@ -21,6 +21,7 @@ import com.powersense.viewmodels.ThemeOption
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val profileViewModel: com.powersense.viewmodels.ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     // 1. Check if a user is currently logged in
     val currentUser = Firebase.auth.currentUser
@@ -75,7 +76,8 @@ fun AppNavigation() {
 
         composable("main") {
             MainAppScreen(
-                appNavController = navController
+                appNavController = navController,
+                profileViewModel = profileViewModel
             )
         }
         composable("profile") {
@@ -91,7 +93,8 @@ fun AppNavigation() {
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                profileViewModel = profileViewModel
             )
         }
 

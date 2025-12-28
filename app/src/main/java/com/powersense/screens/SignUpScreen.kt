@@ -7,17 +7,19 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility // <-- ADDED THIS
-import androidx.compose.material.icons.filled.VisibilityOff // <-- ADDED THIS
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +35,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation // <-- ADDED THIS
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,7 +49,6 @@ import com.powersense.viewmodels.AuthViewModel
 import com.powersense.viewmodels.AuthState
 
 // --- PASSWORD STRENGTH HELPER ---
-// Removing 'public' keyword as it's redundant for enum classes
 enum class PasswordStrength(val text: String, val color: Color) {
     WEAK("Weak", Color.Red),
     AVERAGE("Average", Color.Yellow),
@@ -101,8 +102,7 @@ fun SignUpScreen(
     // This state tracks if the password field is focused
     var isPasswordFocused by remember { mutableStateOf(false) }
 
-    // --- 1. NEW STATE FOR MATCHING ---
-    // null = pristine, true = match, false = mismatch
+    // Matching state: null = pristine, true = match, false = mismatch
     var passwordMatchState by remember { mutableStateOf<Boolean?>(null) }
 
     // State for confirm password visibility toggle
@@ -110,10 +110,14 @@ fun SignUpScreen(
 
     val authState by authViewModel.authState.collectAsState()
     val context = LocalContext.current
-    // --- 7. ADD KEYBOARD/FOCUS CONTROLLERS ---
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
+    // Calculate if password is valid (all requirements met)
+    // This controls the red error state of the password box
+    val isPasswordValid = remember(requirements) {
+        requirements.all { it }
+    }
 
     // React to auth state changes
     LaunchedEffect(authState) {
@@ -143,13 +147,12 @@ fun SignUpScreen(
         }
     }
 
-    // --- 2. NEW EFFECT TO CHECK FOR MATCH ---
+    // Check for match
     LaunchedEffect(password, confirmPassword) {
-        // Only show validation if the user has started typing in the confirm field
         if (confirmPassword.isNotEmpty()) {
             passwordMatchState = (password == confirmPassword)
         } else {
-            passwordMatchState = null // Reset if empty
+            passwordMatchState = null
         }
     }
 
@@ -157,7 +160,8 @@ fun SignUpScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()), // Enable scrolling for smaller screens
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -178,7 +182,7 @@ fun SignUpScreen(
             "Join PowerSense today!",
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 48.dp)
+            modifier = Modifier.padding(bottom = 32.dp)
         )
 
         // --- Full Name Field ---
@@ -206,25 +210,55 @@ fun SignUpScreen(
             shape = RoundedCornerShape(12.dp),
             readOnly = authState is AuthState.Loading,
             singleLine = true,
-            // --- 9. ADD KEYBOARD OPTIONS/ACTIONS ---
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            )
+            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Password Field (UPDATED to use PasswordTextField with Focus) ---
+        // --- REORDERED: Password Requirements Checklist (Now Above) ---
+        // Only show if user is typing/focused on password, or if it's invalid and not empty
+        val showRequirements = isPasswordFocused || (password.isNotEmpty() && !isPasswordValid)
+
+        AnimatedVisibility(visible = showRequirements) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp) // Add padding below list before the input box
+            ) {
+                Text(
+                    text = "Password must contain:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                PasswordRequirements(requirements = requirements)
+            }
+        }
+
+        // --- Password Field (UPDATED) ---
         PasswordTextField(
             value = password,
             onValueChange = { password = it },
             label = "Create your password",
             leadingIcon = Icons.Default.Lock,
             readOnly = authState is AuthState.Loading,
+            // Check for error: If user has typed something AND it's not valid, show error (Red Box)
+            isError = password.isNotEmpty() && !isPasswordValid,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             modifier = Modifier.onFocusChanged { isPasswordFocused = it.isFocused }
         )
+
+        // Optional: Helper text below box if error
+        if (password.isNotEmpty() && !isPasswordValid) {
+            Text(
+                text = "Password does not meet requirements",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.Start).padding(start = 16.dp, top = 4.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         // --- Password Strength Indicator ---
@@ -232,14 +266,13 @@ fun SignUpScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Confirm Password Field (UPDATED with visibility toggle + dynamic border) ---
+        // --- Confirm Password Field ---
         val (matchIcon, iconTint, borderColor) = when (passwordMatchState) {
             true -> Triple(Icons.Default.Check, PowerSenseGreen, PowerSenseGreen)
             false -> Triple(Icons.Default.Close, Color.Red, Color.Red)
             null -> Triple(null, MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.outline)
         }
 
-        // --- Confirm Password Field (Updated) ---
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
@@ -249,13 +282,21 @@ fun SignUpScreen(
             shape = RoundedCornerShape(12.dp),
             readOnly = authState is AuthState.Loading,
             singleLine = true,
-            // Add visual transformation logic
             visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            // Add trailing icon logic manually here to combine the match icon AND the eye icon
             trailingIcon = {
-                Row {
+                // FIX: Center align vertically within Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically, // Ensures vertical centering
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
                     if (matchIcon != null) {
-                        Icon(matchIcon, "Match Status", tint = iconTint, modifier = Modifier.padding(end = 8.dp))
+                        Icon(
+                            imageVector = matchIcon,
+                            contentDescription = "Match Status",
+                            tint = iconTint,
+                            modifier = Modifier.size(24.dp) // Explicit size to match standard icons
+                        )
+                        Spacer(modifier = Modifier.width(8.dp)) // Space between icons
                     }
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                         Icon(
@@ -273,27 +314,12 @@ fun SignUpScreen(
             keyboardActions = KeyboardActions(onDone = {
                 keyboardController?.hide()
                 if (password != confirmPassword) { Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show() }
-                else if (strength != PasswordStrength.GOOD && strength != PasswordStrength.STRONG) { Toast.makeText(context, "Password too weak.", Toast.LENGTH_SHORT).show() }
+                else if (!isPasswordValid) { Toast.makeText(context, "Password requirements not met.", Toast.LENGTH_SHORT).show() }
                 else { authViewModel.signUp(email.trim(), password.trim(), fullName.trim()) }
             })
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // --- Password Requirements Checklist ---
-        AnimatedVisibility(visible = isPasswordFocused) {
-            Column {
-                PasswordRequirements(requirements = requirements)
-            }
-        }
-
-        // This spacer fills the space when the checklist is hidden
-        if (!isPasswordFocused) {
-            // Height is based on 4 lines of text + padding
-            Spacer(modifier = Modifier.height(104.dp))
-        } else {
-            Spacer(modifier = Modifier.height(24.dp))
-        }
+        Spacer(modifier = Modifier.height(32.dp))
 
         // --- Sign Up Button ---
         Button(
@@ -301,8 +327,8 @@ fun SignUpScreen(
                 keyboardController?.hide()
                 if (password != confirmPassword) {
                     Toast.makeText(context, "Passwords do not match.", Toast.LENGTH_SHORT).show()
-                } else if (strength != PasswordStrength.GOOD && strength != PasswordStrength.STRONG) {
-                    Toast.makeText(context, "Password is not strong enough.", Toast.LENGTH_SHORT).show()
+                } else if (!isPasswordValid) {
+                    Toast.makeText(context, "Password requirements not met.", Toast.LENGTH_SHORT).show()
                 } else {
                     authViewModel.signUp(email.trim(), password.trim(), fullName.trim())
                 }
@@ -336,9 +362,9 @@ fun SignUpScreen(
     }
 }
 
-// --- NEW COMPOSABLE for Strength Text ---
+// --- Helper Composables ---
 @Composable
-fun PasswordStrengthIndicator(  strength: PasswordStrength?) {
+fun PasswordStrengthIndicator(strength: PasswordStrength?) {
     val defaultColor = MaterialTheme.colorScheme.background
     val strengthColor by animateColorAsState(
         targetValue = strength?.color ?: defaultColor,
@@ -358,7 +384,6 @@ fun PasswordStrengthIndicator(  strength: PasswordStrength?) {
     }
 }
 
-// --- NEW COMPOSABLE for Requirements Checklist ---
 @Composable
 fun PasswordRequirements(requirements: List<Boolean>) {
     val requirementLabels = listOf(
@@ -378,11 +403,10 @@ fun PasswordRequirements(requirements: List<Boolean>) {
     }
 }
 
-// --- NEW COMPOSABLE for a single requirement row ---
 @Composable
 fun RequirementRow(text: String, isMet: Boolean) {
     val icon = if (isMet) Icons.Default.Check else Icons.Default.Close
-    val color = if (isMet) PowerSenseGreen else MaterialTheme.colorScheme.onSurfaceVariant
+    val color = if (isMet) PowerSenseGreen else MaterialTheme.colorScheme.error // Red if not met, Green if met
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -396,7 +420,8 @@ fun RequirementRow(text: String, isMet: Boolean) {
         )
         Text(
             text = text,
-            color = color
+            color = color,
+            style = MaterialTheme.typography.bodySmall
         )
     }
 }

@@ -35,6 +35,7 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.powersense.ui.theme.PowerSenseGreen
+import com.powersense.ui.theme.PowerSensePeach
 import com.powersense.ui.theme.PowerSenseTheme
 import com.powersense.viewmodels.ProfileState
 import com.powersense.viewmodels.ProfileViewModel
@@ -247,7 +248,7 @@ fun ProfileScreen(
                     )
                     ProfileRow(
                         icon = Icons.Default.PrivacyTip,
-                        text = "Privacy Settings",
+                        text = "Privacy Policy",
                         onClick = { appNavController.navigate("privacy_settings") }
                     )
                     Button(
@@ -279,7 +280,7 @@ fun ProfileScreen(
                             showLogoutDialog = false
                             onLogout() // Perform actual logout logic passed from nav
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                        colors = ButtonDefaults.buttonColors(containerColor = PowerSensePeach)
                     ) {
                         Text("Log Out", color = Color.White)
                     }

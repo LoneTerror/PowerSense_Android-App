@@ -28,7 +28,13 @@ class AuthViewModel : ViewModel() {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState = _authState.asStateFlow()
 
-    // UPDATED: Now accepts fullName
+    // --- MISSING FUNCTION ADDED HERE ---
+    fun logout() {
+        auth.signOut()
+        _authState.value = AuthState.Idle
+    }
+    // -----------------------------------
+
     fun signUp(email: String, password: String, fullName: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -48,7 +54,7 @@ class AuthViewModel : ViewModel() {
                     uid = user.uid,
                     email = email,
                     fullName = fullName,
-                    username = "", // Empty for now, user can add later
+                    username = "",
                     phone = "",
                     profileImageUrl = ""
                 )
@@ -85,7 +91,6 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // NEW: Change Password Function
     fun changePassword(currentPassword: String, newPassword: String) {
         val user = auth.currentUser
         if (user == null || user.email == null) {

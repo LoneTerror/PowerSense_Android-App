@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.powersense.viewmodels.ThemeOption
+import com.powersense.ui.theme.NavBackground
 
 private val LightColorScheme = lightColorScheme(
     primary = PowerSensePurple,
@@ -89,20 +90,27 @@ fun PowerSenseTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            val insetsController = WindowCompat.getInsetsController(window, view)
 
             if (darkTheme) {
-                // Dark Mode: Use the NEW Greyish Background for Status Bar
-                // This ensures the status bar matches the app background
+                // Dark Mode
                 window.statusBarColor = Color(0xFF202124).toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+                window.navigationBarColor = Color(0xFF202124).toArgb() // Dark background
+                insetsController.isAppearanceLightStatusBars = false
+                insetsController.isAppearanceLightNavigationBars = false
             } else {
-                // Light Mode: Dark Mocha Header
-                val aestheticDarkHeader = Color(0xFF4E463F)
-                window.statusBarColor = aestheticDarkHeader.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+                // Light Mode
+                window.statusBarColor = Color(0xFF4E463F).toArgb()
+                window.navigationBarColor = NavBackground.toArgb() // Beige background
+
+                // IMPORTANT: This makes the Back/Home buttons DARK so they show up on Beige
+                insetsController.isAppearanceLightStatusBars = false
+                insetsController.isAppearanceLightNavigationBars = true
             }
         }
     }
+
+
 
     MaterialTheme(
         colorScheme = colorScheme,

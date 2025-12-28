@@ -49,9 +49,10 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.powersense.ui.theme.PowerSenseGreen
+import com.powersense.ui.theme.PowerSensePeach
 import com.powersense.ui.theme.PowerSensePurple
 import com.powersense.ui.theme.PowerSenseTheme
-import com.powersense.viewmodels.ProfileViewModel // Added Import
+import com.powersense.viewmodels.ProfileViewModel
 import com.powersense.viewmodels.SummaryInterval
 import com.powersense.viewmodels.ThemeOption
 import com.powersense.viewmodels.ThemeViewModel
@@ -63,13 +64,15 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     appNavController: NavHostController,
     themeViewModel: ThemeViewModel = viewModel(),
-    profileViewModel: ProfileViewModel = viewModel() // Added ProfileViewModel
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
     val currentTheme by themeViewModel.themeState.collectAsState()
-    val userProfile by profileViewModel.userProfile.collectAsState() // Observe Profile
+    val userProfile by profileViewModel.userProfile.collectAsState()
 
     val isSummaryEnabled by themeViewModel.isSummaryEnabled.collectAsState()
     val summaryInterval by themeViewModel.summaryIntervalState.collectAsState()
+
+    val isHapticsEnabled by themeViewModel.isHapticsEnabled.collectAsState()
 
     var isEcoModeOn by remember { mutableStateOf(true) }
     var isAlertsOn by remember { mutableStateOf(true) }
@@ -121,8 +124,8 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp) // Increased padding for "Advanced" look
-                        .clickable { onNavigateToProfile() }, // Make whole row clickable
+                        .padding(vertical = 24.dp)
+                        .clickable { onNavigateToProfile() },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -130,11 +133,12 @@ fun SettingsScreen(
                         // --- ADVANCED AVATAR ---
                         Box(
                             modifier = Modifier
-                                .size(64.dp) // Larger size
-                                .border(2.dp, PowerSensePurple, CircleShape) // Brand border
-                                .padding(2.dp) // Spacing between border and image
+                                .size(64.dp)
+                                .border(2.dp, PowerSensePurple, CircleShape)
+                                .padding(2.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center // Center content if fallback icon
                         ) {
                             if (userProfile?.profileImageUrl.isNullOrEmpty()) {
                                 Icon(
@@ -153,8 +157,31 @@ fun SettingsScreen(
                                         .build(),
                                     contentDescription = "Profile Picture",
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
+                                    contentScale = ContentScale.Crop,
+                                    // Add placeholder/error handling to visualize loading state
+                                    error = null, // You could pass a painterResource here if you had a fallback drawable
+                                    onLoading = { /* Optional: Show loading spinner logic */ },
+                                    onError = {
+                                        // If error, fallback to icon logic naturally by ensuring state is handled
+                                        // For simple AsyncImage, if it fails, it just shows nothing unless 'error' param is set.
+                                        // Since we wrapped it in 'if (url.isNullOrEmpty())',
+                                        // if the URL is valid but load fails (e.g. 404), it might show blank.
+                                        // Let's improve:
+                                    }
                                 )
+
+                                // Improved Fallback for Load Failure:
+                                // Actually, standard AsyncImage pattern is cleaner:
+                                /*
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(userProfile?.profileImageUrl)
+                                        .crossfade(true)
+                                        .error(R.drawable.ic_launcher_foreground) // Example fallback if you had one
+                                        .build(),
+                                    ...
+                                )
+                                */
                             }
                         }
 
@@ -192,24 +219,9 @@ fun SettingsScreen(
                 )
             }
 
-            // --- POWER MANAGEMENT ---
-            item { SectionHeader("Power Management") }
-            item {
-                SettingsRow(
-                    title = "Eco-Mode Schedule",
-                    subtitle = "Activate power-saving during off-peak hours.",
-                    trailingContent = {
-                        Switch(
-                            checked = isEcoModeOn,
-                            onCheckedChange = { isEcoModeOn = it },
-                            colors = SwitchDefaults.colors(checkedTrackColor = PowerSenseGreen)
-                        )
-                    }
-                )
-            }
+            // --- INTERFACE / FEEDBACK ---
+            item { SectionHeader("Interface") }
 
-            // --- NOTIFICATIONS ---
-            item { SectionHeader("Notifications") }
             item {
                 SettingsRow(
                     title = "Daily Consumption Summary",
@@ -247,23 +259,75 @@ fun SettingsScreen(
                 }
             }
 
+            // NEW: Haptics Toggle
             item {
                 SettingsRow(
-                    title = "Abnormal Usage Alerts",
-                    subtitle = "Get notified of unusual power spikes or drops.",
+                    title = "Haptic Feedback",
+                    subtitle = "Vibrate when toggling switches.",
                     trailingContent = {
                         Switch(
-                            checked = isAlertsOn,
-                            onCheckedChange = { isAlertsOn = it },
+                            checked = isHapticsEnabled,
+                            onCheckedChange = { themeViewModel.setHapticsEnabled(it) },
                             colors = SwitchDefaults.colors(checkedTrackColor = PowerSenseGreen)
                         )
                     }
                 )
             }
 
+            // --- POWER MANAGEMENT ---
+            item { SectionHeader("Power Management") }
+            item {
+                SettingsRow(
+                    title = "Eco-Mode Schedule",
+                    subtitle = "Activate power-saving during off-peak hours.",
+                    trailingContent = {
+                        Switch(
+                            checked = isEcoModeOn,
+                            onCheckedChange = { isEcoModeOn = it },
+                            colors = SwitchDefaults.colors(checkedTrackColor = PowerSenseGreen)
+                        )
+                    }
+                )
+            }
+
+            // --- NOTIFICATIONS ---
+            item { SectionHeader("Notifications") }
+
+            // Max Sensor Capacity Alert
+            item {
+                SettingsRow(
+                    title = "Max Sensor Capacity Alert",
+                    subtitle = "Notify if total current exceeds 30A.",
+                    trailingContent = {
+                        val isMaxEnabled by themeViewModel.isMaxSensorSpikeEnabled.collectAsState()
+                        Switch(
+                            checked = isMaxEnabled,
+                            onCheckedChange = { themeViewModel.setMaxSensorSpikeEnabled(it) },
+                            colors = SwitchDefaults.colors(checkedTrackColor = PowerSenseGreen)
+                        )
+                    }
+                )
+            }
+
+            // Per Appliance Alert
+            item {
+                SettingsRow(
+                    title = "Appliance Usage Alerts",
+                    subtitle = "Notify if specific devices exceed their set thresholds.",
+                    trailingContent = {
+                        val isApplianceEnabled by themeViewModel.isPerApplianceAlertEnabled.collectAsState()
+                        Switch(
+                            checked = isApplianceEnabled,
+                            onCheckedChange = { themeViewModel.setPerApplianceAlertEnabled(it) },
+                            colors = SwitchDefaults.colors(checkedTrackColor = PowerSenseGreen)
+                        )
+                    }
+                )
+            }
+
+
             // --- ACCOUNT ---
             item { SectionHeader("Account") }
-            // Removed "Manage Profile" row since the big header now handles it
             item {
                 SettingsRow(
                     title = "Change Password",
@@ -307,7 +371,7 @@ fun SettingsScreen(
                             showLogoutDialog = false
                             onLogout()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                        colors = ButtonDefaults.buttonColors(containerColor = PowerSensePeach)
                     ) {
                         Text("Log Out", color = Color.White)
                     }

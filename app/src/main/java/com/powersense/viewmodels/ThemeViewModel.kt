@@ -33,8 +33,12 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private val THEME_KEY = stringPreferencesKey("theme_option")
-        private val SUMMARY_INTERVAL_KEY = stringPreferencesKey("summary_interval") // New Key
-        private val SUMMARY_ENABLED_KEY = stringPreferencesKey("summary_enabled") // New Key
+        private val SUMMARY_INTERVAL_KEY = stringPreferencesKey("summary_interval")
+        private val SUMMARY_ENABLED_KEY = stringPreferencesKey("summary_enabled")
+        private val HAPTICS_ENABLED_KEY = stringPreferencesKey("haptics_enabled")
+
+        private val MAX_SENSOR_ALERT_KEY = stringPreferencesKey("max_sensor_alert_enabled")
+        private val PER_APPLIANCE_ALERT_KEY = stringPreferencesKey("per_appliance_alert_enabled")
     }
 
     val themeState = dataStore.data
@@ -71,6 +75,28 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = true
         )
 
+    // NEW: State for Haptic Feedback
+    val isHapticsEnabled = dataStore.data
+        .map { preferences ->
+            preferences[HAPTICS_ENABLED_KEY]?.toBooleanStrictOrNull() ?: true // Default true
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+
+    // Max Sensor Capacity Alert State
+    val isMaxSensorSpikeEnabled = dataStore.data
+        .map { preferences -> preferences[MAX_SENSOR_ALERT_KEY]?.toBooleanStrictOrNull() ?: false }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    // Per Appliance Alert State
+    val isPerApplianceAlertEnabled = dataStore.data
+        .map { preferences -> preferences[PER_APPLIANCE_ALERT_KEY]?.toBooleanStrictOrNull() ?: false }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun setTheme(theme: ThemeOption) {
         viewModelScope.launch {
             dataStore.edit { preferences ->
@@ -94,5 +120,23 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
                 preferences[SUMMARY_ENABLED_KEY] = enabled.toString()
             }
         }
+    }
+
+    // Setter for Haptics
+    fun setHapticsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.edit { preferences ->
+                preferences[HAPTICS_ENABLED_KEY] = enabled.toString()
+            }
+        }
+    }
+
+    // Setter for Alert Threshold Detection
+    fun setMaxSensorSpikeEnabled(enabled: Boolean) {
+        viewModelScope.launch { dataStore.edit { it[MAX_SENSOR_ALERT_KEY] = enabled.toString() } }
+    }
+
+    fun setPerApplianceAlertEnabled(enabled: Boolean) {
+        viewModelScope.launch { dataStore.edit { it[PER_APPLIANCE_ALERT_KEY] = enabled.toString() } }
     }
 }

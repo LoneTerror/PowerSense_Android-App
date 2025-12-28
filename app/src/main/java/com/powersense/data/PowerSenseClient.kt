@@ -1,3 +1,6 @@
+// FIX: File annotations must go BEFORE the package declaration
+@file:OptIn(kotlinx.serialization.InternalSerializationApi::class)
+
 package com.powersense.data
 
 import android.util.Log
@@ -12,6 +15,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -26,14 +30,12 @@ data class SensorData(
     val timestamp: String = ""
 )
 
-// NEW: Data model for a single history point from backend
 @Serializable
 data class HistoryPoint(
     val timestamp: String,
     val value: Double
 )
 
-// NEW: Full response model for /api/sensor-data
 @Serializable
 data class HistoricalSensorData(
     val current: Double = 0.0,
@@ -47,12 +49,19 @@ data class HistoricalSensorData(
     val powerHistory: List<HistoryPoint> = emptyList()
 )
 
+// Data model for Pie Chart (Relay Usage)
+@Serializable
+data class RelayUsage(
+    @SerialName("relay1") val relay1Hours: Double = 0.0,
+    @SerialName("relay2") val relay2Hours: Double = 0.0
+)
+
 @Serializable
 data class RelayDevice(
-    val id: String = "",
-    val name: String = "",
-    val description: String = "",
-    val connectionUrl: String = "",
+    var id: String = "",
+    var name: String = "",
+    var description: String = "",
+    var connectionUrl: String = "",
 
     @get:PropertyName("isOn")
     @set:PropertyName("isOn")
@@ -62,7 +71,9 @@ data class RelayDevice(
     @set:PropertyName("isFavorite")
     var isFavorite: Boolean = false,
 
-    val pin: Int = 0
+    var pin: Int = 0,
+    var threshold: Double? = null,
+    var thresholdUnit: String = "A"
 )
 
 @Serializable
@@ -99,16 +110,26 @@ object PowerSenseClient {
         }
     }
 
-    // NEW: Fetch historical data for charts
     suspend fun getHistoricalData(intervalHours: Int = 24): Result<HistoricalSensorData> {
         val url = "$BASE_URL/api/sensor-data?interval=$intervalHours"
-        Log.d(TAG, "Fetching history from: $url")
         return try {
             val response: HistoricalSensorData = client.get(url).body()
-            Log.d(TAG, "Success fetching history. Points: ${response.powerHistory.size}")
             Result.success(response)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch history: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    // NEW: Fetch Pie Chart Data from Backend
+    @Suppress("unused")
+    suspend fun getRelayUsage(intervalHours: Int = 24): Result<RelayUsage> {
+        val url = "$BASE_URL/api/relay-usage?interval=$intervalHours"
+        return try {
+            val response: RelayUsage = client.get(url).body()
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch relay usage: ${e.message}")
             Result.failure(e)
         }
     }
@@ -127,7 +148,13 @@ object PowerSenseClient {
         }
     }
 
-    suspend fun addRelay(device: RelayDevice): Result<RelayDevice> = Result.success(device)
-    suspend fun updateRelay(device: RelayDevice): Result<Boolean> = Result.success(true)
-    suspend fun deleteRelay(id: String): Result<Boolean> = Result.success(true)
+    // Stub functions without 'suspend' to avoid warnings
+    @Suppress("unused")
+    fun addRelay(device: RelayDevice): Result<RelayDevice> = Result.success(device)
+
+    @Suppress("unused")
+    fun updateRelay(device: RelayDevice): Result<Boolean> = Result.success(true)
+
+    @Suppress("unused")
+    fun deleteRelay(id: String): Result<Boolean> = Result.success(true)
 }

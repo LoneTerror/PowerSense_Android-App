@@ -2,81 +2,95 @@ package com.powersense.screens
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.SettingsApplications
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+
+// --- IMPORTS FOR SCREENS ---
 import com.powersense.screens.tabs.HomeScreen
 import com.powersense.screens.tabs.MetricsScreen
 import com.powersense.screens.tabs.SettingsScreen
 import com.powersense.screens.tabs.SimulationScreen
-import com.powersense.ui.theme.PowerSenseTheme
-import com.powersense.viewmodels.ThemeViewModel
-import com.powersense.viewmodels.RelayViewModel
 
-sealed class BottomBarScreen(
-    val route: String,
-    val title: String,
-    val icon: ImageVector
-) {
-    object Home : BottomBarScreen("home", "Home", Icons.Default.Home)
-    object Simulation : BottomBarScreen("simulation", "Simulation", Icons.Outlined.SettingsApplications)
-    object Metrics : BottomBarScreen("metrics", "Metrics", Icons.Outlined.BarChart)
-    object Settings : BottomBarScreen("settings", "Settings", Icons.Default.Settings)
+// --- IMPORTS FOR THEME ---
+import com.powersense.ui.theme.PowerSensePurple
+
+// --- IMPORTS FOR VIEWMODELS (CRITICAL) ---
+import com.powersense.viewmodels.AuthViewModel
+import com.powersense.viewmodels.HomeViewModel
+import com.powersense.viewmodels.ProfileViewModel
+import com.powersense.viewmodels.RelayViewModel
+import com.powersense.viewmodels.ThemeViewModel
+
+sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
+    object Home : BottomNavItem("home", "Home", Icons.Default.Home)
+    object Simulation : BottomNavItem("simulation", "Simulation", Icons.Default.Bolt)
+    object Metrics : BottomNavItem("metrics", "Metrics", Icons.Default.BarChart)
+    object Settings : BottomNavItem("settings", "Settings", Icons.Default.Settings)
 }
 
 @Composable
 fun MainAppScreen(
-    appNavController: NavHostController
+    appNavController: NavHostController,
+    profileViewModel: ProfileViewModel = viewModel(),
+    themeViewModel: ThemeViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel()
 ) {
-    val navController = rememberNavController()
-    val themeViewModel: ThemeViewModel = viewModel()
+    // Internal NavController for Bottom Tabs
+    val bottomNavController = rememberNavController()
+    val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
-    // Create ONE instance of RelayViewModel here and pass it down
+    // Shared ViewModels
+    // We create them here so the same instance is reused across tabs
+    val homeViewModel: HomeViewModel = viewModel()
     val relayViewModel: RelayViewModel = viewModel()
+
+    val items = listOf(
+        BottomNavItem.Home,
+        BottomNavItem.Simulation,
+        BottomNavItem.Metrics,
+        BottomNavItem.Settings
+    )
 
     Scaffold(
         bottomBar = {
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentDestination = navBackStackEntry?.destination
-
-            val screens = listOf(
-                BottomBarScreen.Home,
-                BottomBarScreen.Simulation,
-                BottomBarScreen.Metrics,
-                BottomBarScreen.Settings,
-            )
-
-            NavigationBar {
-                screens.forEach { screen ->
-                    val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ) {
+                items.forEach { item ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
-                        selected = isSelected,
+                        icon = { Icon(item.icon, contentDescription = item.title) },
+                        label = { Text(item.title) },
+                        selected = currentRoute == item.route,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            selectedTextColor = PowerSensePurple,
+                            indicatorColor = PowerSensePurple,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
                         onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.startDestinationId)
+                            bottomNavController.navigate(item.route) {
+                                popUpTo(bottomNavController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
                                 launchSingleTop = true
+                                restoreState = true
                             }
                         }
                     )
@@ -85,44 +99,50 @@ fun MainAppScreen(
         }
     ) { innerPadding ->
         NavHost(
-            navController = navController,
-            startDestination = BottomBarScreen.Home.route,
-            // Apply ONLY bottom padding to avoid double-padding at top
-            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
+            navController = bottomNavController,
+            startDestination = BottomNavItem.Home.route,
+            modifier = Modifier.padding(innerPadding)
         ) {
-            composable(BottomBarScreen.Home.route) {
-                HomeScreen(relayViewModel = relayViewModel)
+            // 1. HOME TAB
+            composable(BottomNavItem.Home.route) {
+                HomeScreen(
+                    profileViewModel = profileViewModel,
+                    homeViewModel = homeViewModel,
+                    relayViewModel = relayViewModel,
+                    themeViewModel = themeViewModel
+                )
             }
-            composable(BottomBarScreen.Simulation.route) {
-                SimulationScreen(relayViewModel = relayViewModel)
+
+            // 2. SIMULATION (CONTROL) TAB
+            composable(BottomNavItem.Simulation.route) {
+                SimulationScreen(
+                    relayViewModel = relayViewModel,
+                    themeViewModel = themeViewModel
+                )
             }
-            composable(BottomBarScreen.Metrics.route) {
-                MetricsScreen()
+
+            // 3. METRICS TAB
+            composable(BottomNavItem.Metrics.route) {
+                MetricsScreen(
+                    themeViewModel = themeViewModel
+                )
             }
-            composable(BottomBarScreen.Settings.route) {
+
+            // 4. SETTINGS TAB
+            composable(BottomNavItem.Settings.route) {
                 SettingsScreen(
-                    onNavigateToProfile = {
-                        appNavController.navigate("profile")
-                    },
+                    onNavigateToProfile = { appNavController.navigate("profile") },
                     onLogout = {
-                        Firebase.auth.signOut()
+                        authViewModel.logout()
                         appNavController.navigate("login") {
                             popUpTo(0) { inclusive = true }
                         }
                     },
+                    appNavController = appNavController,
                     themeViewModel = themeViewModel,
-                    appNavController = appNavController
+                    profileViewModel = profileViewModel
                 )
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MainAppScreenPreview() {
-    PowerSenseTheme {
-        val fakeNavController = rememberNavController()
-        MainAppScreen(appNavController = fakeNavController)
     }
 }
