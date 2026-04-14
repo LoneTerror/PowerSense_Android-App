@@ -97,7 +97,7 @@ class RelayViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (relayId.isBlank()) return@launch
-                val endpoint = "https://backend.powersense.site/api/relays/$relayId/config"
+                val endpoint = "https://backend.powersense.top/api/relays/$relayId/config"
                 val url = URL(endpoint)
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
@@ -196,7 +196,7 @@ class RelayViewModel : ViewModel() {
     private fun sendApiRequest(relayId: String, isOn: Boolean): Boolean {
         return try {
             if (relayId.isBlank()) return false
-            val endpoint = "https://backend.powersense.site/api/relays/$relayId/toggle"
+            val endpoint = "https://backend.powersense.top/api/relays/$relayId/toggle"
             val url = URL(endpoint)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"

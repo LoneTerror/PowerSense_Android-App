@@ -85,7 +85,7 @@ data class ToggleRequest(
 
 object PowerSenseClient {
     private const val TAG = "PowerSenseClient"
-    private const val BASE_URL = "https://backend.powersense.site"
+    private const val BASE_URL = "https://backend.powersense.top"
 
     private val client = HttpClient(Android) {
         install(ContentNegotiation) {
